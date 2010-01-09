@@ -57,7 +57,8 @@ case "$1" in
 		msg_already_running "PowerDNS Recursor"
 	else
 		msg_starting "PowerDNS Recursor (Powered DNS Recursing server)"
-		daemon /usr/sbin/pdns_recursor --daemon --quiet
+		daemon /usr/sbin/pdns_recursor --daemon --quiet \
+						--config-dir=/etc/pdns-recursor
 		RETVAL=$?
 		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/pdns_recursor
 	fi
@@ -88,7 +89,8 @@ case "$1" in
 		msg_already_running "PowerDNS Recursor"
 	else
 		show "PowerDNS Recursor in foreground (testing mode)"
-		/usr/sbin/pdns_recursor --daemon=no --quiet=no
+		/usr/sbin/pdns_recursor --daemon=no --quiet=no \
+						--config-dir=/etc/pdns-recursor
 	fi
 	;;
   show)
