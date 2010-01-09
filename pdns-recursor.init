@@ -1,0 +1,142 @@
+#!/bin/sh
+# pdns-recursor	This is controller stript for PowerDNS Recursor name server.
+#
+# chkconfig:	345 85 15
+#
+# description:	pdns-recursor is is a recursing Domain Name Server (DNS) \
+#		that is used to resolve host names to IP addresses.
+
+# Source function library
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration
+. /etc/sysconfig/network
+
+# Check that networking is up.
+if is_yes "${NETWORKING}"; then
+	if [ ! -f /var/lock/subsys/network -a "$1" != stop -a "$1" != status ]; then
+		msg_network_down "PowerDNS Recursor"
+		exit 1
+	fi
+else
+	exit 0
+fi
+
+BINARYPATH=/usr/sbin
+SBINARYPATH=/usr/sbin
+SOCKETPATH=/var/run
+
+doPC() {
+	ret=$(/usr/bin/rec_control $1 $2 2> /dev/null)
+}
+
+doPC ping
+NOTRUNNING=$?
+
+RETVAL=0
+case "$1" in
+  status)
+	status pdns_recursor
+	exit $?
+	;;
+  stop)
+	if test "$NOTRUNNING" = "0"; then
+		msg_stopping "PowerDNS Recursor"
+		doPC quit 2>&1 >/dev/null
+		[ $? -eq 0 ] && ok || fail
+		rm /var/lock/subsys/pdns_recursor
+	else
+		msg_not_running "PowerDNS Recursor"
+	fi
+	;;
+  force-stop)
+	run_cmd "Killing PowerDNS Recursor without grace" killall -v -9 pdns_recursor
+	;;
+  start)
+	if test "$NOTRUNNING" = "0"; then
+		msg_already_running "PowerDNS Recursor"
+	else
+		msg_starting "PowerDNS Recursor (Powered DNS Recursing server)"
+		daemon /usr/sbin/pdns_recursor --daemon --quiet
+		RETVAL=$?
+		[ $RETVAL -eq 0 ] && touch /var/lock/subsys/pdns_recursor
+	fi
+	;;
+  restart)
+	$0 stop
+	run_cmd "PowerDNS Recursor (3 sec. timeout)" sleep 3
+	$0 start
+	exit $?
+	;;
+  reload|force-reload)
+	if test "$NOTRUNNING" = "0"; then
+		show "Reloading PowerDNS Recursor"
+		doPC cycle 2>&1 >/dev/null
+		if [ $? -eq 0 ]; then
+			ok
+		else
+			fail
+			RETVAL=1
+		fi
+	else
+		msg_not_running "PowerDNS Recursor" >&2
+		exit 7
+	fi
+	;;
+  monitor)
+	if test "$NOTRUNNING" = "0"; then
+		msg_already_running "PowerDNS Recursor"
+	else
+		show "PowerDNS Recursor in foreground (testing mode)"
+		/usr/sbin/pdns_recursor --daemon=no --quiet=no
+	fi
+	;;
+  show)
+	if [ $# -lt 2 ]; then
+		msg_usage "$0 {show|mrtg|cricket} <variable_name>"
+		exit 2
+	fi
+	if test "$NOTRUNNING" = "0"; then
+		echo -n "$2="
+		doPC get $2 ; echo $ret
+	else
+		msg_not_running "PowerDNS Recursor"
+	fi
+	;;
+  mrtg)
+	if [ $# -lt 2 ]; then
+		msg_usage "$0 {show|mrtg|cricket} <variable_name>"
+		exit 2
+	fi
+	if test "$NOTRUNNING" = "0"; then
+		doPC get $2 ; echo $ret
+		if [ "$3x" != "x" ]; then
+			doPC get $3 ; echo $ret
+		else
+			echo 0
+		fi
+		doPC get uptime ; echo $ret
+		echo PowerDNS Recursor
+	else
+		msg_not_running "PowerDNS Recursor" >&2
+		exit 7
+	fi
+	;;
+  cricket)
+	if [ $# -lt 2 ]; then
+		msg_usage "$0 {show|mrtg|cricket} <variable_name>"
+		exit 2
+	fi
+	if test "$NOTRUNNING" = "0"; then
+		doPC get $2 ; echo $ret
+	else
+		msg_not_running "PowerDNS Recursor" >&2
+		exit 7
+	fi
+	;;
+  *)
+	msg_usage "$0 {start|stop|restart|reload|force-reload|status|show|mrtg|cricket|monitor} [...]"
+	exit 3
+esac
+
+exit $RETVAL
