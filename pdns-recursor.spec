@@ -1,12 +1,12 @@
 Summary:	Modern, advanced and high performance recursing/non authoritative nameserver
 Summary(pl.UTF-8):	Nowoczesny i zaawansowany buforujący serwer DNS o wysokiej wudajności
 Name:		pdns-recursor
-Version:	3.1.7.2
+Version:	3.3
 Release:	1
 License:	GPL
 Group:		Networking/Daemons
 Source0:	http://downloads.powerdns.com/releases/%{name}-%{version}.tar.bz2
-# Source0-md5:	5fdba3612e281bf65c6c9f665673dc4e
+# Source0-md5:	87daeeebb6f7af9e07814ff6c43300dd
 Source1:	%{name}.init
 Source2:	%{name}.conf
 URL:		http://www.powerdns.com/
@@ -44,7 +44,7 @@ PowerDNS Recursor jest wysokowydajnym buforującym serwerem DNS.
 	CC="%{__cc}" \
 	CXX="%{__cxx}" \
 	OPTFLAGS="%{rpmcxxflags}" \
-	LDFLAGS="%{rpmldflags}"
+	LDFLAGS="%{rpmldflags} -pthread"
 
 %install
 rm -rf $RPM_BUILD_ROOT
