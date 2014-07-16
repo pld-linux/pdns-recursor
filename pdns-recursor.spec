@@ -12,7 +12,7 @@ URL:		http://www.powerdns.com/
 BuildRequires:	boost-devel
 Requires(post):	sed >= 4.0
 Requires(post,preun):	/sbin/chkconfig
-Requires(post,preun):	/sbin/chkconfig
+Requires(post,preun,postun):	systemd-units
 Requires(postun):	/usr/sbin/groupdel
 Requires(postun):	/usr/sbin/userdel
 Requires(pre):	/bin/id
@@ -20,6 +20,7 @@ Requires(pre):	/usr/bin/getgid
 Requires(pre):	/usr/sbin/groupadd
 Requires(pre):	/usr/sbin/useradd
 Requires:	rc-scripts
+Requires:	systemd-units
 Provides:	group(djbdns)
 Provides:	nameserver
 Provides:	user(pdns-recursor)
@@ -73,18 +74,21 @@ rm -rf $RPM_BUILD_ROOT
 %post
 /sbin/chkconfig --add pdns-recursor
 %service pdns-recursor restart
+%systemd_post %{name}.service
 
 %preun
 if [ "$1" = "0" ]; then
 	%service pdns-recursor stop
 	/sbin/chkconfig --del pdns-recursor
 fi
+%systemd_preun %{name}.service
 
 %postun
 if [ "$1" = "0" ]; then
 	%userremove pdns-recursor
 	%groupremove djbdns
 fi
+%systemd_reload
 
 %files
 %defattr(644,root,root,755)
