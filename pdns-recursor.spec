@@ -75,9 +75,9 @@ rm -rf $RPM_BUILD_ROOT
 
 install -d $RPM_BUILD_ROOT/etc/rc.d/init.d
 install %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
-mv $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml-dist	$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml
-%{__sed} -i -e "s/^#   setgid: ''$/setgid: 'djbdns'/g"		$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml
-%{__sed} -i -e "s/^#   setuid: ''$/setuid: 'pdns-recursor'/g"	$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml
+mv $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml{-dist,}
+%{__sed} -i -e "s/^#   setgid: ''$/   setgid: 'djbdns'/g"		$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml
+%{__sed} -i -e "s/^#   setuid: ''$/   setuid: 'pdns-recursor'/g"	$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml
 %{__mkdir_p} $RPM_BUILD_ROOT%{_localstatedir}/lib/%{name}/{nod,udr}
 
 %clean
