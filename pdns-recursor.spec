@@ -1,15 +1,32 @@
+# TODO:
+# - consider
+#	--enable-dns-over-tls
+#	--with-libdecaf / libsodium
+#	--with-net-snmp
+# - SysV init script requires update.
+# Some resources are generated using regal.
 Summary:	Modern, advanced and high performance recursing/non authoritative nameserver
 Summary(pl.UTF-8):	Nowoczesny i zaawansowany buforujący serwer DNS o wysokiej wydajności
 Name:		pdns-recursor
-Version:	3.6.0
+Version:	5.1.2
 Release:	1
-License:	GPL
+License:	GPL v2
 Group:		Networking/Daemons
 Source0:	http://downloads.powerdns.com/releases/%{name}-%{version}.tar.bz2
-# Source0-md5:	95f21e6d64c1332aeca9fa3f786dd0a2
+# Source0-md5:	26d26a034649a2ea04c67fcde8782598
 Source1:	%{name}.init
 URL:		http://www.powerdns.com/
-BuildRequires:	boost-devel
+BuildRequires:	boost-devel >= 1.54.0
+BuildRequires:	cargo >= 1.64
+BuildRequires:	curl-devel >= 7.21.3
+BuildRequires:	fstrm-devel
+BuildRequires:	libcap-devel
+BuildRequires:	libsodium-devel
+BuildRequires:	luajit-devel >= 2.0.2
+BuildRequires:	openssl-devel
+BuildRequires:	protobuf-devel
+BuildRequires:	python3 >= 3.6
+BuildRequires:	systemd-devel
 Requires(post):	sed >= 4.0
 Requires(post,preun):	/sbin/chkconfig
 Requires(post,preun,postun):	systemd-units
@@ -35,34 +52,33 @@ PowerDNS Recursor jest wysokowydajnym buforującym serwerem DNS.
 
 %prep
 %setup -q
+%{__sed} -i -e 's/localstatedir/nodcachedir/g' settings/rust/Makefile.am
 
 %build
-%{__make} \
-	BINDIR="%{_bindir}" \
-	SBINDIR="%{_sbindir}" \
-	SYSCONFDIR="%{_sysconfdir}/%{name}" \
-	CC="%{__cc}" \
-	CXX="%{__cxx}" \
-	OPTFLAGS="%{rpmcxxflags}" \
-	LDFLAGS="%{rpmldflags} -pthread"
+%{__libtoolize}
+%{__aclocal} -I m4
+%{__autoconf}
+%{__autoheader}
+%{__automake}
+%configure \
+	--sysconfdir=%{_sysconfdir}/%{name} \
+	--with-service-group=djbdns
+
+%{__make} V=1
 
 %install
 rm -rf $RPM_BUILD_ROOT
 
 %{__make} install \
-	BINDIR="%{_bindir}" \
-	SBINDIR="%{_sbindir}" \
-	SYSCONFDIR="%{_sysconfdir}/%{name}" \
+	SYSTEMD_DIR=%{systemdunitdir} \
 	DESTDIR=$RPM_BUILD_ROOT
 
-rm -rf $RPM_BUILD_ROOT%{_sysconfdir}/init.d
 install -d $RPM_BUILD_ROOT/etc/rc.d/init.d
 install %{SOURCE1} $RPM_BUILD_ROOT/etc/rc.d/init.d/%{name}
-install -d $RPM_BUILD_ROOT%{systemdunitdir}
-install contrib/systemd-pdns-recursor.service $RPM_BUILD_ROOT%{systemdunitdir}/%{name}.service
-mv $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.conf-dist $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.conf
-sed -i 's/^# setgid=$/setgid=djbdns/g' $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.conf
-sed -i 's/^# setuid=$/setuid=pdns-recursor/g' $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.conf
+mv $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml-dist	$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml
+%{__sed} -i -e "s/^#   setgid: ''$/setgid: 'djbdns'/g"		$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml
+%{__sed} -i -e "s/^#   setuid: ''$/setuid: 'pdns-recursor'/g"	$RPM_BUILD_ROOT%{_sysconfdir}/%{name}/recursor.yml
+%{__mkdir_p} $RPM_BUILD_ROOT%{_localstatedir}/lib/%{name}/{nod,udr}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -94,9 +110,10 @@ fi
 %defattr(644,root,root,755)
 %doc README
 %attr(754,root,root) /etc/rc.d/init.d/%{name}
-%attr(644,root,root) %{systemdunitdir}/%{name}.service
+%attr(644,root,root) %{systemdunitdir}/%{name}*.service
 %dir %{_sysconfdir}/%{name}
-%attr(600,root,root) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/recursor.conf
-%attr(755,root,root) %{_sbindir}/*
-%attr(755,root,root) %{_bindir}/*
-%{_mandir}/man1/*
+%attr(640,root,djbdns) %config(noreplace) %verify(not md5 mtime size) %{_sysconfdir}/%{name}/recursor.yml
+%attr(755,root,root) %{_bindir}/rec_control
+%attr(755,root,root) %{_sbindir}/pdns_recursor
+%{_mandir}/man1/*.1*
+%attr(775,root,djbdns) %{_localstatedir}/lib/%{name}
