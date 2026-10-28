@@ -1,0 +1,14 @@
+Rust settings defaults put the NOD/UDR dirs under $(localstatedir) while the
+C++ side uses $(nodcachedir) (--with-nodcachedir); make both use nodcachedir.
+
+--- pdns-recursor-5.4.9.orig/rec-rust-lib/rust/Makefile.am
++++ pdns-recursor-5.4.9/rec-rust-lib/rust/Makefile.am
+@@ -21,7 +21,7 @@
+ 	src/lib.rs \
+ 	src/misc.rs \
+ 	src/web.rs
+-	SYSCONFDIR=$(sysconfdir) NODCACHEDIRNOD=$(localstatedir)/nod NODCACHEDIRUDR=$(localstatedir)/udr $(CARGO) build --release $(RUST_TARGET) --target-dir=$(builddir)/target --manifest-path ${srcdir}/Cargo.toml
++	SYSCONFDIR=$(sysconfdir) NODCACHEDIRNOD=$(nodcachedir)/nod NODCACHEDIRUDR=$(nodcachedir)/udr $(CARGO) build --release $(RUST_TARGET) --target-dir=$(builddir)/target --manifest-path ${srcdir}/Cargo.toml
+ 	cp -pv target/$(RUSTC_TARGET_ARCH)/release/librecrust.a librecrust.a
+ 	cp -pv target/$(RUSTC_TARGET_ARCH)/cxxbridge/recrust/src/lib.rs.h lib.rs.h
+ 	cp -pv target/$(RUSTC_TARGET_ARCH)/cxxbridge/recrust/src/web.rs.h web.rs.h

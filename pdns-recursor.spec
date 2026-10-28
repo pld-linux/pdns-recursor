@@ -8,13 +8,21 @@
 Summary:	Modern, advanced and high performance recursing/non authoritative nameserver
 Summary(pl.UTF-8):	Nowoczesny i zaawansowany buforujący serwer DNS o wysokiej wydajności
 Name:		pdns-recursor
-Version:	5.1.2
+Version:	5.4.9
 Release:	1
 License:	GPL v2
 Group:		Networking/Daemons
-Source0:	http://downloads.powerdns.com/releases/%{name}-%{version}.tar.bz2
-# Source0-md5:	26d26a034649a2ea04c67fcde8782598
+Source0:	https://downloads.powerdns.com/releases/%{name}-%{version}.tar.xz
+# Source0-md5:	c5e797f095459cb90d37c12a8acd3dc6
 Source1:	%{name}.init
+# cd rec-rust-lib/rust
+# cargo vendor-filterer --platform='*-unknown-linux-*' --tier=2
+# cd ../..
+# tar cJf %%{name}-crates-%%{version}.tar.xz rec-rust-lib/rust/vendor
+Source2:	%{name}-crates-%{version}.tar.xz
+# Source2-md5:	975757920a5dc3124e352260898ba67b
+Patch0:		%{name}-nodcachedir.patch
+Patch1:		%{name}-CVE-2026-52684.patch
 URL:		http://www.powerdns.com/
 BuildRequires:	boost-devel >= 1.54.0
 BuildRequires:	cargo >= 1.64
@@ -24,9 +32,13 @@ BuildRequires:	libcap-devel
 BuildRequires:	libsodium-devel
 BuildRequires:	luajit-devel >= 2.0.2
 BuildRequires:	openssl-devel
-BuildRequires:	protobuf-devel
 BuildRequires:	python3 >= 3.6
+BuildRequires:	rpmbuild(macros) >= 2.050
+BuildRequires:	rust
 BuildRequires:	systemd-devel
+BuildRequires:	tar >= 1:1.22
+BuildRequires:	xz
+%{?rust_req}
 Requires(post):	sed >= 4.0
 Requires(post,preun):	/sbin/chkconfig
 Requires(post,preun,postun):	systemd-units
@@ -41,6 +53,7 @@ Requires:	systemd-units
 Provides:	group(djbdns)
 Provides:	nameserver
 Provides:	user(pdns-recursor)
+ExclusiveArch:	%{rust_arches}
 BuildRoot:	%{tmpdir}/%{name}-%{version}-root-%(id -u -n)
 
 %description
@@ -51,10 +64,28 @@ DNS server.
 PowerDNS Recursor jest wysokowydajnym buforującym serwerem DNS.
 
 %prep
-%setup -q
-%{__sed} -i -e 's/localstatedir/nodcachedir/g' settings/rust/Makefile.am
+%setup -q -a2
+%patch -P0 -p1
+%patch -P1 -p3
+
+# use our offline registry
+export CARGO_HOME="$(pwd)/.cargo"
+
+mkdir -p "$CARGO_HOME"
+cat >.cargo/config.toml <<EOF
+[net]
+offline = true
+
+[source.crates-io]
+replace-with = 'vendored-sources'
+
+[source.vendored-sources]
+directory = '$PWD/rec-rust-lib/rust/vendor'
+EOF
 
 %build
+export CARGO_HOME="$(pwd)/.cargo"
+export RUSTFLAGS="%{rpmrustflags}"
 %{__libtoolize}
 %{__aclocal} -I m4
 %{__autoconf}
@@ -62,12 +93,19 @@ PowerDNS Recursor jest wysokowydajnym buforującym serwerem DNS.
 %{__automake}
 %configure \
 	--sysconfdir=%{_sysconfdir}/%{name} \
+	--enable-dnstap \
+	--enable-nod \
+	--enable-systemd \
+	--with-libcap \
+	--with-libsodium \
 	--with-service-group=djbdns
 
 %{__make} V=1
 
 %install
 rm -rf $RPM_BUILD_ROOT
+export CARGO_HOME="$(pwd)/.cargo"
+export RUSTFLAGS="%{rpmrustflags}"
 
 %{__make} install \
 	SYSTEMD_DIR=%{systemdunitdir} \
