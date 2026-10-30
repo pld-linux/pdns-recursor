@@ -30,7 +30,11 @@ BuildRequires:	curl-devel >= 7.21.3
 BuildRequires:	fstrm-devel
 BuildRequires:	libcap-devel
 BuildRequires:	libsodium-devel
+%ifarch x32
+BuildRequires:	lua54-devel
+%else
 BuildRequires:	luajit-devel >= 2.0.2
+%endif
 BuildRequires:	openssl-devel
 BuildRequires:	python3 >= 3.6
 BuildRequires:	rpmbuild(macros) >= 2.050
@@ -92,6 +96,9 @@ export RUSTFLAGS="%{rpmrustflags}"
 %{__autoheader}
 %{__automake}
 %configure \
+%ifarch %{ix86} x32
+	--enable-experimental-64bit-time_t-support-on-glibc \
+%endif
 	--sysconfdir=%{_sysconfdir}/%{name} \
 	--enable-dnstap \
 	--enable-nod \
