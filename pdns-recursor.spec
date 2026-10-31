@@ -9,7 +9,7 @@ Summary:	Modern, advanced and high performance recursing/non authoritative names
 Summary(pl.UTF-8):	Nowoczesny i zaawansowany buforujący serwer DNS o wysokiej wydajności
 Name:		pdns-recursor
 Version:	5.4.9
-Release:	1
+Release:	2
 License:	GPL v2
 Group:		Networking/Daemons
 Source0:	https://downloads.powerdns.com/releases/%{name}-%{version}.tar.xz
